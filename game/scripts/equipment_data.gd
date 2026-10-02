@@ -1,9 +1,11 @@
 class_name JadeEquipment
 extends RefCounted
 ## Original gear definitions. Mesh, quality, enhancement and cosmetic layers are separate.
-const SLOTS=["armor","head","weapon"]
+const SLOTS=["armor","head","weapon","boots","gloves"]
+# Accessory assets are in the isolated art study, not the live model yet.
+const LIVE_VISUAL_SLOTS=["armor","head","weapon"]
 const QUALITY_ORDER=["normal","refined","unique","elite","super"]
-const DEFAULT_GEAR={"armor":"wayfarer_coat","head":"topknot","weapon":"reed_saber"}
+const DEFAULT_GEAR={"armor":"wayfarer_coat","head":"topknot","weapon":"reed_saber","boots":"","gloves":""}
 const STARTER_OWNED=["wayfarer_coat","warden_lamellar","topknot","warden_helm","reed_saber","ironwind_glaive"]
 const ITEMS={
 	"wayfarer_coat":{"label":"Wayfarer coat","slot":"armor","mesh":"Gear_Wayfarer","quality":"normal","defense":0,"vitality":0,"speed":0.0,"enhancement":0,"purification":"","cosmetic":""},
@@ -19,9 +21,13 @@ static func item(player:Dictionary,slot:String)->Dictionary:
 	return ITEMS.get(equipped.get(slot,DEFAULT_GEAR.get(slot,"")),{})
 static func stats(player:Dictionary)->Dictionary:
 	var weapon=item(player,"weapon")
-	var armor=item(player,"armor")
-	var head=item(player,"head")
-	return {"attack":int(weapon.get("attack",18))+maxi(0,int(player.get("level",1))-1)*3,"defense":int(armor.get("defense",0))+int(head.get("defense",0)),"max_hp":120+maxi(0,int(player.get("level",1))-1)*15+int(armor.get("vitality",0))+int(head.get("vitality",0)),"speed":5.2+float(armor.get("speed",0))+float(head.get("speed",0))+float(weapon.get("speed",0)),"reach":float(weapon.get("reach",2.2)),"cooldown":float(weapon.get("cooldown",.44))}
+	var result={"attack":0 if weapon.is_empty() else int(weapon.get("attack",0))+maxi(0,int(player.get("level",1))-1)*3,"defense":0,"max_hp":120+maxi(0,int(player.get("level",1))-1)*15,"speed":5.2,"reach":float(weapon.get("reach",0.0)),"cooldown":float(weapon.get("cooldown",.44))}
+	for slot in SLOTS:
+		var equipped=item(player,slot)
+		result.defense+=int(equipped.get("defense",0))
+		result.max_hp+=int(equipped.get("vitality",0))
+		result.speed+=float(equipped.get("speed",0))
+	return result
 static func next_owned(player:Dictionary,slot:String)->String:
 	var choices:Array=[]
 	for id in player.get("owned_equipment",STARTER_OWNED):

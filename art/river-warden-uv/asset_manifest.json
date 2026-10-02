@@ -1,0 +1,42 @@
+{
+  "assets": {
+    "art/concept-warden/river_warden_clay.glb": {
+      "bytes": 10367884,
+      "sha256": "5b3f25f0bcf4723d8f8b4df85c3115cd523d097f9147b38d8bc6f99c178467bd"
+    },
+    "art/river-warden-uv/river_warden_uv_master.blend": {
+      "bytes": 15959241,
+      "sha256": "fa850a6e9e076b87493938cd0942e80ac6fc8b203291a789874518beea8e8d5f"
+    },
+    "art/river-warden-uv/river_warden_uv_master.glb": {
+      "bytes": 15645996,
+      "sha256": "1a5540de5cea66d06932ce268e70bb341e5ce6cac178a8beabd09a6acb0bfac8"
+    }
+  },
+  "expected": {
+    "body_source_faces": 13378,
+    "hair_charts": 36,
+    "joints": 53,
+    "meshes": 168,
+    "outfit_charts": 528
+  },
+  "limits": {
+    "body_uv_quantization": 1e-07,
+    "gutter_rounding_tolerance_px": 0.002,
+    "joint_tolerance": 1e-07,
+    "normal_vector_difference_limit": 0.005,
+    "overlap_area_epsilon_uv2": 1e-13,
+    "overlap_projection_tolerance_uv": 1e-10,
+    "position_quantization_m": 1e-06,
+    "weight_quantization": 1e-06
+  },
+  "schema": 1,
+  "skin_sha256": "e897c4cc1b6ad5d10a7d2b2be92402feda4e772e6582dfaf0a1e8fc4621d8097",
+  "source_checkpoint": "1c208576644961e66e3bcc41718f041fe382c91d",
+  "status": "Validated editable UV authoring master; outfit/hair painting and in-game appearance review pending",
+  "visual_limitations": [
+    "The newest underwear-clearance correction needs fresh visual verification",
+    "Static data checks do not prove animation clipping or surface quality",
+    "The 53-bone study is separate from the playable 22-bone hero"
+  ]
+}

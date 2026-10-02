@@ -1,0 +1,11 @@
+{
+  "source_archive": "Official Blender Extensions MPFB 2.0.17",
+  "archive_sha256": "4f0a879d64a39bf646fbf5f53601ac678855da329d650617dca5737548239a87",
+  "asset_license": "CC0-1.0",
+  "addon_code_license": "GPL-3.0-or-later; addon not bundled in game",
+  "outputs": {
+    "mpfb_adult_base.blend": "00e496925328856a4bf80db546409d5d98b7a54b6f1d878e6fa3eaabafba3475",
+    "mpfb_adult_base.glb": "10cfe158032ad56cc2b41647dd2c26b0ba0a6f08c3d849890766865ab8f14e95"
+  },
+  "runtime_integration": false
+}

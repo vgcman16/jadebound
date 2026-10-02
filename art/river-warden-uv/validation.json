@@ -1,0 +1,32 @@
+{
+  "body_source_faces": 13378,
+  "charts": {
+    "hair": 36,
+    "outfit": 528
+  },
+  "elapsed_seconds": 27.19236690899561,
+  "geometry_comparison": "Oriented triangle multiset: positions1e-6m, named weights1e-6, body UVs1e-7; accessor order/UV duplication ignored",
+  "glove_chart_counts": {
+    "Gear_Gloves_Fingerless_l": 10,
+    "Gear_Gloves_Fingerless_r": 10
+  },
+  "hair_flow_meshes": 11,
+  "highest_measured_chart_p99_anisotropy": 6.898666493920383,
+  "inverse_bind_max_error": 0.0,
+  "joint_rest_max_error": 0.0,
+  "joints": 53,
+  "master_glb_sha256": "1a5540de5cea66d06932ce268e70bb341e5ce6cac178a8beabd09a6acb0bfac8",
+  "maximum_weight_sum_error": 2.384185791015625e-07,
+  "meshes": 168,
+  "minimum_gutter_px": {
+    "hair": 15.999969482421875,
+    "outfit": 31.99993896484375
+  },
+  "normal_vector_max_difference_from_clay": 0.004440009593963623,
+  "overlap_method": "Shared boundaries excluded; convex triangle clipping with area>1e-13UV\u00b2 and projection tolerance1e-10UV",
+  "passed": true,
+  "positive_area_overlap_pairs": 0,
+  "scope": "Exported asset data only; no render, motion, runtime integration or material-quality acceptance",
+  "skin_sha256": "e897c4cc1b6ad5d10a7d2b2be92402feda4e772e6582dfaf0a1e8fc4621d8097",
+  "source_checkpoint": "1c208576644961e66e3bcc41718f041fe382c91d"
+}

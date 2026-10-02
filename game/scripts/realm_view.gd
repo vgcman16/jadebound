@@ -13,6 +13,7 @@ var force_pose:String=""
 var pose_fraction:float=.3
 var camera_offset:Vector3=Vector3(17,21,17)
 var asset_cache:Dictionary={}
+var detailed_courtyard:bool=false
 
 func mat(color:Color,glow:float=0.0)->StandardMaterial3D:
 	var key=str(color)+str(glow)
@@ -71,8 +72,10 @@ func _ready():
 	env.background_mode=Environment.BG_COLOR
 	env.background_color=Color("172d37")
 	env.ambient_light_source=Environment.AMBIENT_SOURCE_COLOR
-	env.ambient_light_color=Color("889faf")
-	env.ambient_light_energy=0.48
+	env.ambient_light_color=Color("a7bbcd")
+	env.ambient_light_energy=0.38
+	env.sky=neutral_reflection_sky()
+	env.reflected_light_source=Environment.REFLECTION_SOURCE_SKY
 	env.tonemap_mode=Environment.TONE_MAPPER_FILMIC
 	env.fog_enabled=true
 	env.fog_light_color=Color("6b8e92")
@@ -81,10 +84,10 @@ func _ready():
 	add_child(environment)
 	var sun=DirectionalLight3D.new()
 	sun.rotation_degrees=Vector3(-38,-36,0)
-	sun.light_color=Color("ffcf91")
-	sun.light_energy=0.70
+	sun.light_color=Color("fff0da")
+	sun.light_energy=0.82
 	sun.shadow_enabled=true
-	sun.shadow_opacity=.72
+	sun.shadow_opacity=.65
 	sun.directional_shadow_max_distance=70
 	add_child(sun)
 	camera=Camera3D.new()
@@ -99,6 +102,7 @@ func _ready():
 func build_landscape():
 	var rng=RandomNumberGenerator.new()
 	rng.seed=38140
+	detailed_courtyard=ResourceLoader.exists("res://assets/models/courtyard_detail.glb")
 	# Continuous earth/grass variation; no checkerboard or perfect yellow plaza.
 	var ground_mesh=PlaneMesh.new()
 	ground_mesh.size=Vector2(60,60)
@@ -106,22 +110,43 @@ func build_landscape():
 	var shader=Shader.new()
 	shader.code="""shader_type spatial;
 render_mode diffuse_burley;
+uniform sampler2D meadow_albedo : source_color, filter_linear_mipmap_anisotropic, repeat_enable;
+uniform sampler2D earth_albedo : source_color, filter_linear_mipmap_anisotropic, repeat_enable;
+uniform sampler2D earth_normal : hint_normal, filter_linear_mipmap_anisotropic, repeat_enable;
+uniform sampler2D earth_roughness : filter_linear_mipmap_anisotropic, repeat_enable;
+uniform bool use_surface_maps = false;
 varying vec3 world_pos;
 float hash(vec2 p) { return fract(sin(dot(p,vec2(127.1,311.7)))*43758.5453123); }
 float noise(vec2 p) { vec2 i=floor(p); vec2 f=fract(p); vec2 u=f*f*(3.0-2.0*f); return mix(mix(hash(i),hash(i+vec2(1,0)),u.x),mix(hash(i+vec2(0,1)),hash(i+vec2(1,1)),u.x),u.y); }
 void vertex() { world_pos=(MODEL_MATRIX*vec4(VERTEX,1.0)).xyz; }
 void fragment() {
- vec2 p=world_pos.xz; float broad=noise(p*.28); float fine=noise(p*9.0);
- vec3 grass=mix(vec3(.105,.155,.098),vec3(.235,.29,.16),broad);
- grass+=vec3(.027,.024,.012)*(fine-.5);
- float trail=1.0-smoothstep(.75,1.8,abs(p.y-(-3.0+(p.x+5.0)*.63)));
- vec3 earth=mix(vec3(.20,.17,.115),vec3(.28,.25,.18),noise(p*.8));
- ALBEDO=mix(grass,earth,trail*.8); ROUGHNESS=.94;
+ vec2 p=world_pos.xz; float broad=noise(p*.31); float medium=noise(p*1.4); float fine=noise(p*23.0);
+ vec3 grass=mix(vec3(.058,.086,.035),vec3(.15,.185,.072),broad);
+ if(use_surface_maps){vec3 a=texture(meadow_albedo,p*.31).rgb;vec3 b=texture(meadow_albedo,vec2(-p.y,p.x)*.21+vec2(.37,.61)).rgb;grass=mix(a,b,.28+medium*.25);grass=mix(grass,vec3(dot(grass,vec3(.299,.587,.114))),.16)*(.34+broad*.10);}
+ grass+=vec3(.016,.019,.007)*(fine-.5);
+ float lane=abs(p.y-(1.35+p.x*.42));
+ float trail=1.0-smoothstep(.55,1.75+medium*.9,lane);
+ float courtyard=1.0-smoothstep(-.05,.80,max(abs(p.x+4.3)-3.8,abs(p.y+1.3)-4.65)+medium*.30);
+ float soil_weight=max(courtyard,trail*(.73+medium*.27));
+ vec3 earth=use_surface_maps?texture(earth_albedo,p*.31).rgb:vec3(.15,.125,.08);
+ earth=mix(earth*.78,earth*1.18,medium);
+ ALBEDO=mix(grass,earth,soil_weight);
+ ROUGHNESS=use_surface_maps?texture(earth_roughness,p*.31).r:.94;
+ if(use_surface_maps){NORMAL_MAP=texture(earth_normal,p*.31).rgb;NORMAL_MAP_DEPTH=.35*soil_weight;}
 }
 """
 	var ground_mat=ShaderMaterial.new()
 	ground_mat.shader=shader
+	if detailed_courtyard:
+		for channel in ["albedo","normal","roughness"]:ground_mat.set_shader_parameter("earth_"+channel,load("res://assets/textures/courtyard/jb_courtyard_earth_"+channel+".png"))
+		ground_mat.set_shader_parameter("meadow_albedo",load("res://assets/textures/courtyard/jb_meadow_albedo.png"))
+		ground_mat.set_shader_parameter("use_surface_maps",true)
 	ground.material_override=ground_mat
+	if detailed_courtyard:
+		var bed_mesh=PlaneMesh.new()
+		bed_mesh.size=Vector2(8.5,8.9)
+		var bed=mesh_node(bed_mesh,Color.WHITE,Vector3(-4.2,-.052,-1.05))
+		bed.material_override=ground_mat
 	# Asymmetric fitted flagstones: three quiet stone colors, recessed seams.
 	var stones:Array=[]
 	for gx in range(-7,8):
@@ -143,18 +168,37 @@ void fragment() {
 			var p=center+normal*(col*.63+rng.randf_range(-.12,.12))+tangent*rng.randf_range(-.16,.16)
 			var size_=Vector3(rng.randf_range(.45,.64),.08,rng.randf_range(.54,.77))
 			stones.append([size_,Vector3(p.x,-.05,p.y),Color("717665").darkened(rng.randf_range(0,.23)),lane_rotation+rng.randf_range(-.14,.14)])
-	batch_boxes(stones)
+	if detailed_courtyard:
+		model("courtyard_detail",Vector3.ZERO)
+	else:batch_boxes(stones)
 	model("house",Vector3(-10,0,-7))
-	model("house",Vector3(-10,0,1),Vector3(.85,.85,.85))
+	if not detailed_courtyard:model("house",Vector3(-10,0,1),Vector3(.85,.85,.85))
 	var house=model("house",Vector3(-3,0,-11))
 	house.rotation.y=PI/2
-	model("shrine",Vector3(1,0,-8))
-	model("gate",Vector3(1,0,-7),Vector3(.85,.85,.85)).rotation.y=-.3
+	if not detailed_courtyard:
+		model("shrine",Vector3(1,0,-8))
+		model("gate",Vector3(1,0,-7),Vector3(.85,.85,.85)).rotation.y=-.3
 	model("shrine",Vector3(-13,0,9),Vector3(1.1,1.1,1.1))
-	model("elder",Vector3(JadeWorld.ELDER.x,0,JadeWorld.ELDER.y))
-	world_label("KEEPER SURI",Vector3(-5,2.5,-4),Color("ffe5a3"),25)
-	world_label("◆",Vector3(-5,3.2,-4),Color("ffd978"),44)
-	model("tree",Vector3(-9,0,7),Vector3(1.15,1.15,1.15))
+	if detailed_courtyard and ResourceLoader.exists("res://assets/models/hero_modular.glb"):
+		var keeper=model("hero_modular",Vector3(JadeWorld.ELDER.x,0,JadeWorld.ELDER.y),Vector3.ONE*1.15)
+		var appearance={"visual":keeper,"gear_signature":""}
+		apply_equipment(appearance,{"gear":Equipment.DEFAULT_GEAR,"dead":0})
+		for part in keeper.find_children("*","MeshInstance3D",true,false):
+			if String(part.name).begins_with("Weapon_"):part.visible=false
+			for i in part.mesh.get_surface_count():
+				var original=part.mesh.surface_get_material(i)
+				if original is StandardMaterial3D and original.resource_name.to_lower().contains("cloth"):
+					var dyed=original.duplicate()
+					dyed.albedo_color=Color("93a78f")
+					part.set_surface_override_material(i,dyed)
+		var animators=keeper.find_children("*","AnimationPlayer",true,false)
+		if not animators.is_empty():
+			animators[0].get_animation("idle").loop_mode=Animation.LOOP_LINEAR
+			animators[0].play("idle")
+	else:model("elder",Vector3(JadeWorld.ELDER.x,0,JadeWorld.ELDER.y))
+	world_label("KEEPER SURI",Vector3(-5,2.5,-4),Color("d5d4b3"),18)
+	world_label("◆",Vector3(-5,3.2,-4),Color("cfb679"),27)
+	model("tree",Vector3(-9,0,3.4) if detailed_courtyard else Vector3(-9,0,7),Vector3.ONE*(1.0 if detailed_courtyard else 1.15))
 	model("tree",Vector3(5,0,-10),Vector3(.85,.85,.85))
 	# Lanterns mark the settlement and adventure boundary.
 	for pos in [Vector3(-3,0,-1),Vector3(-7,0,-1),Vector3(2,0,0),Vector3(6,0,3),Vector3(-5,0,-8)]:
@@ -162,19 +206,20 @@ void fragment() {
 		var light=OmniLight3D.new()
 		light.position=pos+Vector3(0,1.5,0)
 		light.light_color=Color("ffc87c")
-		light.light_energy=1.25
-		light.omni_range=5.5
+		light.light_energy=.23
+		light.omni_range=2.6
 		add_child(light)
 	# Tree clusters frame the play area, leaving the central field readable.
-	for i in 62:
+	for i in (18 if detailed_courtyard else 62):
 		var x=rng.randf_range(-23,23)
 		var z=rng.randf_range(-23,23)
 		if x>-16 and x<16 and z>-15 and z<16: continue
 		var s=rng.randf_range(.7,1.5)
 		model("tree",Vector3(x,0,z),Vector3(s,s,s)).rotation.y=rng.randf()*TAU
-	for pos in [Vector3(-15,0,-5),Vector3(-14,0,3),Vector3(-6,0,8),Vector3(1,0,-12),Vector3(13,0,-10),Vector3(14,0,2),Vector3(3,0,15)]:
-		model("bamboo",pos,Vector3(1.1,1.1,1.1))
-	for i in 48:
+	if not detailed_courtyard:
+		for pos in [Vector3(-15,0,-5),Vector3(-14,0,3),Vector3(-6,0,8),Vector3(1,0,-12),Vector3(13,0,-10),Vector3(14,0,2),Vector3(3,0,15)]:
+			model("bamboo",pos,Vector3(1.1,1.1,1.1))
+	for i in (14 if detailed_courtyard else 48):
 		var pos=Vector3(rng.randf_range(-20,18),0,rng.randf_range(-18,20))
 		if pos.distance_to(Vector3(-5,0,-3))<7 or pos.distance_to(Vector3(6,0,5))<7: continue
 		model("rock",pos,Vector3.ONE*rng.randf_range(.3,1))
@@ -215,8 +260,8 @@ func world_label(text:String,pos:Vector3,color:Color,size:int=24,parent:Node=sel
 
 func ring(radius:float,color:Color,parent:Node)->MeshInstance3D:
 	var m=TorusMesh.new()
-	m.inner_radius=radius-.025
-	m.outer_radius=radius+.025
+	m.inner_radius=radius-.013
+	m.outer_radius=radius+.013
 	m.rings=32
 	m.ring_segments=5
 	return mesh_node(m,color,Vector3(0,.045,0),parent)
@@ -243,7 +288,7 @@ func update_state(state:Dictionary,local_id:int,dt:float):
 					for clip in animator.get_animation_list():
 						if clip.to_lower().contains("idle") or clip.to_lower().contains("walk") or clip.to_lower().contains("run"):animator.get_animation(clip).loop_mode=Animation.LOOP_LINEAR
 				var shadow=soft_shadow(root)
-				var circle=ring(.57,Color("79e9c9") if type=="players" else Color("e18565"),root)
+				var circle=ring(.57,Color("5d8272") if type=="players" else Color("e18565"),root)
 				var title=data.name if type=="players" else ("ASHEN WARDEN" if data.elite else "Ashen marauder")
 				var label=world_label(title,Vector3(0,2.9 if not data.get("elite",false) else 3.3,0),Color("faf0d5") if type=="players" else Color("ffc4a1"),21,root)
 				var health=box(Vector3(.9,.07,.045),Vector3(0,2.65,0),Color("db685e"),root)
@@ -261,21 +306,24 @@ func update_state(state:Dictionary,local_id:int,dt:float):
 			if data.attack>0 and not actor.modular: actor.visual.rotation.y+=sin(data.attack/.28*PI)*.5
 			
 			if actor.animator and not force_pose.is_empty() and type=="players" and id==local_id:
-				if actor.animator.has_animation(force_pose):
-					actor.animator.play(force_pose)
-					actor.animator.seek(actor.animator.get_animation(force_pose).length*pose_fraction,true)
+				var sampled_clip=animation_for(actor,data,force_pose)
+				if actor.animator.has_animation(sampled_clip):
+					actor.animator.play(sampled_clip)
+					actor.animator.seek(actor.animator.get_animation(sampled_clip).length*pose_fraction,true)
 					actor.animator.advance(0)
 					actor.animator.pause()
 				actor.visual.position.y=(1.65 if pose_fraction<.7 else .1) if force_pose=="jump" else 0.0
 			elif actor.animator:
 				var clip="jump" if jump>0 and actor.animator.has_animation("jump") else ("attack" if data.attack>0 else (("run" if actor.animator.has_animation("run") else "walk") if moving else "idle"))
 				if not actor.animator.has_animation(clip) and clip=="walk" and actor.animator.has_animation("run"):clip="run"
+				clip=animation_for(actor,data,clip)
 				if actor.animator.has_animation(clip):
-					var starts_attack=clip=="attack" and not actor.attack_was
+					var is_attack=clip.begins_with("attack")
+					var starts_attack=is_attack and not actor.attack_was
 					if starts_attack:
 						actor.animator.speed_scale=actor.animator.get_animation(clip).length/maxf(.1,data.attack)
 						actor.animator.play(clip,.04)
-					elif clip!="attack" and actor.animator.current_animation!=clip:
+					elif not is_attack and actor.animator.current_animation!=clip:
 						actor.animator.speed_scale=actor.animator.get_animation(clip).length/.7 if clip=="jump" else (1.25 if clip=="run" else 1.0)
 						actor.animator.play(clip,.08)
 				actor.attack_was=data.attack>0
@@ -419,9 +467,23 @@ func apply_equipment(actor:Dictionary,player:Dictionary):
 	var signature=JSON.stringify(player.get("gear",{}))+str(player.dead>0)
 	if signature==actor.gear_signature:return
 	actor.gear_signature=signature
+	if is_instance_valid(actor.get("quality_fx")):
+		actor.quality_fx.visible=false
+		actor.quality_fx.queue_free()
+		actor.quality_fx=null
 	var visible_names:Array=[]
-	for slot in Equipment.SLOTS:visible_names.append(Equipment.item(player,slot).get("mesh",""))
+	var slot_meshes:Dictionary={}
+	for slot in Equipment.SLOTS:
+		var mesh=Equipment.item(player,slot).get("mesh","")
+		if not mesh.is_empty():
+			visible_names.append(mesh)
+			slot_meshes[slot]=mesh
+	# The prototype topknot is also the base hairstyle when no helmet is equipped.
+	if player.get("gear",{}).get("head","").is_empty():visible_names.append("Head_Topknot")
 	var weapon=Equipment.item(player,"weapon")
+	if weapon.get("effect","")=="jade_edge" and player.dead<=0:
+		var anchor=actor.visual.find_child("Saber_FX",true,false)
+		if anchor:actor.quality_fx=weapon_glints(anchor)
 	for node in actor.visual.find_children("*","MeshInstance3D",true,false):
 		var name_=String(node.name)
 		var is_gear=name_.begins_with("Gear_") or name_.begins_with("Head_") or name_.begins_with("Weapon_")
@@ -434,9 +496,93 @@ func apply_equipment(actor:Dictionary,player:Dictionary):
 			node.set_surface_override_material(surface,null)
 			if node.visible and name_.begins_with(weapon.get("mesh","NONE")) and weapon.get("effect","")=="jade_edge" and player.dead<=0:
 				var original=node.mesh.surface_get_material(surface)
-				if original is StandardMaterial3D and (original.resource_name.to_lower().contains("steel") or original.resource_name.to_lower().contains("blade")):
+				if original is StandardMaterial3D and (original.resource_name.to_lower().contains("blade") and original.resource_name.to_lower().contains("edge")):
 					var glowing=original.duplicate()
 					glowing.emission_enabled=true
 					glowing.emission=Color(.16,.60,.38)
 					glowing.emission_energy_multiplier=1.8
+					var gradient=Gradient.new()
+					gradient.offsets=PackedFloat32Array([0,.83,.96,1])
+					gradient.colors=PackedColorArray([Color.BLACK,Color.BLACK,Color.WHITE,Color.WHITE])
+					var edge_mask=GradientTexture2D.new()
+					edge_mask.gradient=gradient
+					edge_mask.width=128
+					edge_mask.height=8
+					glowing.emission_texture=edge_mask
+					glowing.emission_operator=BaseMaterial3D.EMISSION_OP_MULTIPLY
 					node.set_surface_override_material(surface,glowing)
+
+	JadeAppearanceCoverage.apply(actor.visual,slot_meshes)
+
+func animation_for(actor:Dictionary,player:Dictionary,requested:String)->String:
+	if requested=="attack" and Equipment.item(player,"weapon").get("mesh","")=="Weapon_Glaive" and actor.animator.has_animation("attack_glaive"):
+		return "attack_glaive"
+	return requested
+
+func pick_context(point:Vector2,state:Dictionary)->Dictionary:
+	var candidates:Array=[]
+	for id in state.get("enemies",{}):
+		var enemy=state.enemies[id]
+		if enemy.dead<=0:candidates.append({"type":"enemy","id":id,"pos":enemy.pos,"height":2.6})
+	candidates.append({"type":"npc","id":0,"pos":JadeWorld.ELDER,"height":2.5})
+	for id in state.get("drops",{}):candidates.append({"type":"loot","id":id,"pos":state.drops[id].pos,"height":.65})
+	var best:Dictionary={}
+	var nearest=INF
+	for candidate in candidates:
+		var base=Vector3(candidate.pos.x,0,candidate.pos.y)
+		var feet=camera.unproject_position(base)
+		var head=camera.unproject_position(base+Vector3.UP*candidate.height)
+		var rect=Rect2(Vector2(minf(feet.x,head.x)-17,minf(feet.y,head.y)-8),Vector2(absf(feet.x-head.x)+34,absf(feet.y-head.y)+16))
+		var distance=point.distance_to((feet+head)*.5)
+		if rect.has_point(point) and distance<nearest:
+			best=candidate
+			nearest=distance
+	return best
+
+func weapon_glints(anchor:Node3D)->CPUParticles3D:
+	var sparks=CPUParticles3D.new()
+	sparks.name="EquippedQualityGlints"
+	sparks.amount=6
+	sparks.lifetime=.5
+	sparks.local_coords=true
+	sparks.emission_shape=CPUParticles3D.EMISSION_SHAPE_POINTS
+	# Rest-space points along the original curved saber, relative to its hand marker.
+	sparks.emission_points=PackedVector3Array([Vector3(.11,.28,0),Vector3(.21,.51,0),Vector3(.36,.72,0)])
+	sparks.direction=Vector3.UP
+	sparks.spread=25
+	sparks.initial_velocity_min=.05
+	sparks.initial_velocity_max=.16
+	sparks.gravity=Vector3(0,.08,0)
+	sparks.scale_amount_min=.65
+	sparks.scale_amount_max=1.0
+	sparks.use_fixed_seed=true
+	sparks.seed=41
+	var mesh=SphereMesh.new()
+	mesh.radius=.012
+	mesh.height=.038
+	mesh.radial_segments=6
+	mesh.rings=3
+	sparks.mesh=mesh
+	var material=StandardMaterial3D.new()
+	material.shading_mode=BaseMaterial3D.SHADING_MODE_UNSHADED
+	material.albedo_color=Color("befde0")
+	material.emission_enabled=true
+	material.emission=Color("7cdbab")
+	material.emission_energy_multiplier=1.5
+	sparks.material_override=material
+	anchor.add_child(sparks)
+	return sparks
+
+static func neutral_reflection_sky()->Sky:
+	var sky=Sky.new()
+	var sky_material=ProceduralSkyMaterial.new()
+	sky_material.sky_top_color=Color("647480")
+	sky_material.sky_horizon_color=Color("bcc3c7")
+	sky_material.ground_bottom_color=Color("26302e")
+	sky_material.ground_horizon_color=Color("737d7b")
+	sky_material.sky_energy_multiplier=.65
+	sky_material.ground_energy_multiplier=.45
+	sky_material.sun_angle_max=0.0
+	sky.sky_material=sky_material
+	sky.radiance_size=Sky.RADIANCE_SIZE_128
+	return sky

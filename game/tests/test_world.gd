@@ -28,6 +28,8 @@ func _initialize():
 	p.pos=Vector2(4,2)
 	var hp=w.enemies[1].hp
 	w.action(1,1,Vector2(5,2))
+	check(w.enemies[1].hp==hp,"windup does not deal damage early")
+	w.tick(.25)
 	check(w.enemies[1].hp<hp,"melee damage authoritative")
 	var after=w.enemies[1].hp
 	w.action(1,1,Vector2(5,2))
@@ -35,6 +37,7 @@ func _initialize():
 	for i in 3:
 		p.cooldown=0
 		w.action(1,1,Vector2(5,2))
+		w.tick(.25)
 	check(w.enemies[1].dead>0 and w.drops.size()==1,"enemy defeat creates loot")
 	w.action(1,4,p.pos)
 	check(p.gold==9 and p.seals==1 and w.drops.is_empty(),"loot collected once")

@@ -10,7 +10,12 @@ timeout 30s godot --headless --path game --script res://tests/test_world.gd | te
 grep -q 'JADE_WORLD_TESTS_PASSED' builds/world-test.log
 timeout 30s godot --headless --path game --script res://tests/test_equipment.gd | tee builds/equipment-test.log
 grep -q 'JADE_EQUIPMENT_TESTS_PASSED' builds/equipment-test.log
-python3 -m py_compile tools/generate_assets.py tools/test_network.py tools/test_asset_contract.py
+for test in progression_catalog progression_integration controls appearance_coverage; do
+  timeout 30s godot --headless --path game --script "res://tests/test_${test}.gd" | tee "builds/${test}-test.log"
+  if grep -E "SCRIPT ERROR|FAIL" "builds/${test}-test.log"; then exit 1; fi
+  grep -q "PASSED" "builds/${test}-test.log"
+done
+python3 -m py_compile tools/generate_assets.py tools/generate_modular_hero.py tools/test_network.py tools/test_asset_contract.py
 python3 tools/test_asset_contract.py
 if [[ -f game/assets/models/hero_modular.glb ]]; then
   timeout 30s godot --headless --path game --script res://tests/test_modular_visuals.gd | tee builds/modular-contract.log

@@ -1,0 +1,29 @@
+{
+  "assets": [
+    {
+      "path": "game/assets/textures/courtyard/jb_meadow_albedo.png",
+      "origin": "Original built-in image generation; no image inputs",
+      "date": "2026-10-02",
+      "prompt": "Use case: photorealistic-natural. Asset type: ORIGINAL seamless square top-down albedo texture for a 3D martial-fantasy game's grassy terrain, not a finished scene or screenshot. Create dense fine natural olive meadow grass, short irregular slender individual blades and overlapping tufts with scattered tiny dry tan blades, small mossy gaps, subdued earthy irregular bare soil flecks and a few tiny weathered pebbles. The physical tile covers about 2 by 2 meters. Rich believable medium- and fine-scale variation that remains legible when tiled over a game ground plane. Muted olive, dark moss, dry ochre, warm grey-brown soil, no saturated neon green. Orthographic straight overhead, perfectly flat even diffuse illumination, no directional cast shadows, no ambient vignette, no specular highlights, no horizon, no perspective depth, no large objects or flowers, no characters, no labels, no UI, no frame, no texture grid. Seamless matching edges on every side. Output only the single detailed base-color/albedo tile at 1024x1024. Original artwork; do not imitate or copy any specific game's texture.",
+      "sha256": "3863bf2f9359660a3b356a44e428af72fcc5d37f8d28d4eef4e1fd6563d37199",
+      "actual_dimensions": [
+        1254,
+        1254
+      ],
+      "role": "Terrain albedo, reviewed only after application in engine",
+      "seamless_edges": "Requested; not yet independently numerically verified"
+    },
+    {
+      "path": "game/assets/textures/courtyard/jb_limestone_source.png",
+      "origin": "Original built-in image generation; no image inputs",
+      "date": "2026-10-02",
+      "role": "Base mineral albedo for UV-layout-aware flagstone face atlas; authored edge/cavity/roughness masks remain separate",
+      "prompt": "Use case: photorealistic-natural. Asset type: ORIGINAL seamless top-down base-color texture for weathered fine-grained blue-grey limestone paving in a fantasy game. A single continuous FLAT STONE SURFACE, not an arrangement of tiles. Subtle but clearly readable mineral strata, grey ochre inclusions, small localized chipped pits, a few restrained thin irregular hairline fissures and worn matte patches. Dense natural surface information at several scales, no repetitive cloud-noise appearance. Dark to medium neutral blue-grey stone, subdued mineral variation, no bright white or shiny polish. Neutral uniform diffuse lighting with NO directional shadows, no specular highlights, no bevel illustration, no ambient vignette, no dramatic lighting. Perfect straight-overhead orthographic surface coverage. No perspective, no scenery, no objects, no letters, no watermark, no frame, no tile grid or grout lines. Seamless edges for material sampling. The tile represents roughly one square metre. Output only one square 1024x1024 albedo image. Entirely original artwork; no copied game or brand textures.",
+      "sha256": "ba677bb12d7cfccf3c33c4d1b52ef1e3d1d254857e5cbb3f82b35c8e06a5e5aa",
+      "actual_dimensions": [
+        1254,
+        1254
+      ]
+    }
+  ]
+}

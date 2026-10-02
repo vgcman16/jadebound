@@ -222,3 +222,68 @@ The 2018 pirate reveal is also republished under a 2024 catalogue path, with its
 - The official examples do not authorize reuse of any copyrighted image, design, or client asset
 
 Research is complete for the public sources accessible in this pass. Video-specific findings remain explicitly pending the actual clip.
+
+## 10. Level-dependent gear breadth for Jadebound
+
+Added 2026-10-02 for the user's request for many equipment items and level-dependent gear/skills. The [expanded class and control document](classes-progression-coverage.md) now contains confirmed mouse/key behavior, skill requirements, mastery, XP modes, documented costs/ranges, source conflicts and the recommended server checks. This section adds an original production catalogue without duplicating the whole-game coverage.
+
+### What the official equipment tables verify
+
+| Official example | Required character level | Required weapon proficiency | Required Strength | Meaning |
+|---|---:|---:|---:|---|
+| Steel Blade | 5 | 0 | 0 | Early item exists at each quality |
+| Cutlass | 40 | 4 | 65 | Character level alone does not establish eligibility |
+| Conquest Blade | 115 | 12 | 176 | High-level gear also expects developed proficiency and attributes |
+
+Source: [official blade catalogue](https://co.99.com/guide/items/blades.shtml). These proper names identify evidence only, not proposed Jadebound gear. Normal, Refined, Unique, Elite and Super versions occur within each base group. The catalogue has anomalous individual rows, so it should not be imported as unchecked balance data.
+
+The [Trojan armor table](https://co.99.com/guide/items/mails.shtml) separately lists forms at levels 15, 22, 32, 40, 47, 57, 70, 87, 100, 110 and 120, with later 121-140 bands. [Monk equipment](https://co.99.com/newclass/monk/) explicitly records class and proficiency restrictions as well as level. Shape progression, item-quality progression and character qualification are three separate systems.
+
+The archival [general FAQ](https://co.99.com/guide/faqs.shtml) describes exceptions when upgrading already-equipped items, while [rebirth advantages](https://co.99.com/guide/quests/2rebornadv.shtml) describes relaxed restrictions for some low-level gear after rebirth. Jadebound should use its own consistent strict gates initially; implement any future exception as an explicit tested rule, not an accidental loophole.
+
+### Representative original catalogue
+
+Proposed three visible progression bands: starter around level 1, trained around level 15, veteran around level 35. These are original placeholders for pacing tests, not copied Conquer thresholds or a claim that all entries have been built. Weapon proficiency can advance from 0 to 3 to 6 across those bands; exact stat requirements should follow Jadebound's actual attribute scale. Every item card must state the real applicable gates.
+
+Each cell below denotes a distinct authored form, not a recolor. Names can be reconciled with existing project names. The table defines 36 visible base forms across 12 families. Five quality variants can produce 180 item definitions, but that is still 36 base forms, not 180 unique models. Enhancement, sockets, purification and cosmetics remain independent.
+
+| Family | Starter form | Trained form | Veteran form | Visible progression requirement |
+|---|---|---|---|---|
+| Paired blades | Reedsteel Twins | Split-Moon Blades | Stormglass Talons | Short clean blades → opposing hooked guards → elegant segmented cutting profiles with inset channels |
+| Spear | Ferry Spear | Windcut Glaive | Dawnspire Lance | Wrapped shaft and leaf head → winged cutting head → long layered head/ferrule, balanced with two-hand grip |
+| Bow | Willow Hunting Bow | Crescent Recurve | Starwood Warbow | Simple curved limbs → pronounced recurve and grip ornaments → layered tapered limbs with luminous inset accents |
+| Heavy hammer | Quarry Maul | Bellforge Hammer | Embervault Crusher | Compact stone/iron head → flanged metal head → patterned striking faces and a visible energy chamber |
+| Caster implement | Riverwood Staff | Lanternspire Rod | Astral Reed Scepter | Wood/metal tip → suspended focal ring → layered prongs/focal ornament; avoid a generic glowing ball |
+| Long sword | Traveler Longblade | Tideguard Sword | Silverwake Edge | Straight blade/plain guard → flowing guard and fuller → elegant long profile with crisp dark/light segmentation |
+| Lamellar armor | Wayfarer Vest | Riverguard Lamellar | Dawnward Harness | Fitted cloth/leather → overlapping plates/tassets → detailed shoulders/bracers/greaves with dark recesses |
+| Light armor | Scout Wraps | Reedshadow Leathers | Galeweave Suit | Wrapped fitted torso → asymmetrical layered panels → refined bracers, split skirt and shaped leg protection |
+| Caster robe | Novice River Robe | Mistfold Vestment | Celestial Tide Robe | Two plain cloth layers → patterned hems/waist sash → overlapping sleeve/hem silhouette and small metal ornaments |
+| Headgear | Traveler Circlet | Crestguard Helm | Sunthread Crown | Thin circlet → fitted helmet with modest crest → elaborate crest around the same adult-sized skull |
+| Boots | Trail Boots | Ironstep Greaves | Cloudwake Sabatons | Leather ankle shape → articulated shin plates → layered refined metal toe/shin accents |
+| Shield | Woven Guard | Riverstone Buckler | Dawnmirror Shield | Wood/woven disc → shaped rim and boss → scalloped layered face with inset reflective/emissive motif |
+
+Use common skeletons, tested hand sockets, shared material slots and a consistent ornament vocabulary to make this catalogue economical to build. Reuse safe construction parts such as wraps, rivets and bevel treatments, while each band changes a readable outer contour. Modular generation should not produce a thousand indistinguishable sticks.
+
+Jewelry can add rings and pendants at the same level bands, with distinct icons, silhouettes in inspection, and stat roles. It need not add a full-body emitter per slot. Two equal-level items can serve different purposes: reach versus recovery, damage versus protection, resource efficiency versus burst. These choices are original balance proposals, not extracted Conquer formulas.
+
+### Keep the progression axes independent
+
+- Base family and level band choose the physical form, compatibility and base stat budget
+- Quality chooses stat multipliers and the designed finish/VFX grade; a low-level Super item still has its low-level base form and requirements
+- Composition +n changes its separate enhancement budget; it does not silently set quality or skill rank
+- Sockets and gems store actual occupied slots and gem effects; gem grade is separate from equipment quality
+- Purification can later select a separate appearance variant with an explicit precedence rule
+- Garments, weapon cosmetics, wings and halos override only their declared presentation channels
+- Skill mastery unlocks ranks/handling; an expensive glowing weapon must not grant an unlearned skill unless that item explicitly has a tested granted-skill rule
+
+For original quality visuals: plain material → better finish → patterned inlay → more elaborate trim → highest-quality localized light/trail accents. These are deliberate Jadebound design choices; the only broad Conquer visual guarantee verified here is Super weapon glow, not one universal color or every-slot body aura.
+
+### Visible equipment and progression acceptance
+
+Start by making the existing two loadouts satisfying, then author the catalogue in tested families. A small initial batch should already include starter/trained/veteran variants of the current weapon role, three body forms, head/boot changes and a contrasting second weapon family. Expand breadth only through actual authored forms and checked definitions.
+
+The item browser should show locked future gear with exact reasons, not silently equip it. Earning the required level should unlock an observable change in form and stats. Equipping a second item of a different quality at the same required level should demonstrate quality independently. Include a same-family, same-level comparison so the visual difference cannot be mistaken for level progression.
+
+For every generated item definition, require a unique ID, family, slot, level/class/proficiency/stat requirements, base stats, quality, enhancement state, appearance IDs, compatible animation profile and source/provenance. Validate that IDs resolve, models exist, requirements are internally consistent and two-handed/offhand rules are legal. Test grip alignment, attack poses, unequip, death, respawn and save/load for each newly introduced form family.
+
+An equipment swap must preserve item identity and ownership, remove the previous visual/effect attachments, recalculate legal abilities and derived stats, then present the new state together. Report the quantity honestly as base forms, item definitions and quality variants separately.

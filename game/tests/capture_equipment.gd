@@ -53,5 +53,5 @@ func capture(directory:String,label:String):
 	if not actor.is_empty():
 		for node in actor.visual.find_children("*","MeshInstance3D",true,false):
 			if node.visible:visible.append(String(node.name))
-	records.append({"file":path,"result":result,"gear":p.gear.duplicate(true),"stats":JadeEquipment.stats(p),"visible_meshes":visible,"pose":app.view.force_pose,"fraction":app.view.pose_fraction})
+	records.append({"file":path,"result":result,"gear":p.gear.duplicate(true),"stats":JadeEquipment.stats(p),"visible_meshes":visible,"pose":app.view.force_pose,"fraction":app.view.pose_fraction,"actual_clip":actor.animator.current_animation if not actor.is_empty() else ""})
 	print("GEAR_FRAME ",label," result=",result," visible=",visible)

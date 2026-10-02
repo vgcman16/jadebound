@@ -23,7 +23,7 @@ func _ready():
 	multiplayer.peer_disconnected.connect(_peer_disconnected)
 	multiplayer.connected_to_server.connect(_connected)
 	multiplayer.connection_failed.connect(func(): connection_note.emit("Connection failed. Check host and UDP port 27841."))
-	multiplayer.server_disconnected.connect(func(): connection_note.emit("Host disconnected. Press F1 to start a new offline session."))
+	multiplayer.server_disconnected.connect(func(): connection_note.emit("Host disconnected. Open the realm menu to start a new offline session."))
 	start_offline()
 
 func start_offline():
@@ -76,6 +76,7 @@ func _peer_disconnected(id:int):
 	if model:
 		model.players.erase(id)
 		commands.erase(id)
+		commands.erase(str(id)+":equip")
 
 func send_input(move:Vector2,target:Vector2,use_target:bool):
 	sequence+=1
@@ -97,7 +98,13 @@ func send_equip(slot:String,item_id:String):
 @rpc("any_peer","call_remote","reliable",1)
 func submit_equip(slot:String,item_id:String):
 	if not mode in ["server","host"]:return
-	model.equip(multiplayer.get_remote_sender_id(),slot,item_id)
+	if slot.length()>16 or item_id.length()>48:return
+	var sender=multiplayer.get_remote_sender_id()
+	var key=str(sender)+":equip"
+	var now=Time.get_ticks_msec()
+	if now-int(commands.get(key,0))<100:return
+	commands[key]=now
+	model.equip(sender,slot,item_id)
 
 @rpc("any_peer","call_remote","unreliable_ordered",0)
 func submit_input(seq:int,move:Vector2,target:Vector2,use_target:bool):
