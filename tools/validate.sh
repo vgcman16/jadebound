@@ -8,6 +8,18 @@ timeout 90s godot --headless --path game --editor --import > builds/import.log 2
 if grep -E 'SCRIPT ERROR|ERROR:' builds/import.log; then exit 1; fi
 timeout 30s godot --headless --path game --script res://tests/test_world.gd | tee builds/world-test.log
 grep -q 'JADE_WORLD_TESTS_PASSED' builds/world-test.log
-python3 -m py_compile tools/generate_assets.py tools/test_network.py
+timeout 30s godot --headless --path game --script res://tests/test_equipment.gd | tee builds/equipment-test.log
+grep -q 'JADE_EQUIPMENT_TESTS_PASSED' builds/equipment-test.log
+for test in progression_catalog progression_integration controls appearance_coverage; do
+  timeout 30s godot --headless --path game --script "res://tests/test_${test}.gd" | tee "builds/${test}-test.log"
+  if grep -E "SCRIPT ERROR|FAIL" "builds/${test}-test.log"; then exit 1; fi
+  grep -q "PASSED" "builds/${test}-test.log"
+done
+python3 -m py_compile tools/generate_assets.py tools/generate_modular_hero.py tools/test_network.py tools/test_asset_contract.py
+python3 tools/test_asset_contract.py
+if [[ -f game/assets/models/hero_modular.glb ]]; then
+  timeout 30s godot --headless --path game --script res://tests/test_modular_visuals.gd | tee builds/modular-contract.log
+  grep -q "JADE_MODULAR_VISUAL_CONTRACT_PASSED" builds/modular-contract.log
+fi
 # Explicit opt-in for loopback sockets in locked-down CI.
 if [[ "${JADE_NETWORK_TEST:-0}" == 1 ]]; then timeout 30s python3 tools/test_network.py; fi

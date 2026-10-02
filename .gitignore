@@ -17,3 +17,24 @@ Thumbs.db
 .idea/
 local/
 captures/
+
+# Copyrighted reference pixels are local review material, never game/repo assets.
+research/reference-only/
+# Private supplied-image review notes are not a public game deliverable.
+research/full-game-coverage-and-photo-findings.md
+
+# Godot derives embedded GLB images on import; canonical bytes live in GLB.
+game/assets/models/hero_modular_jb_*.png
+game/assets/models/hero_modular_jb_*.png.import
+
+game/assets/models/courtyard_detail_*.png
+game/assets/models/courtyard_detail_*.png.import
+
+game/assets/models/flagstone_samples_*.png
+game/assets/models/flagstone_samples_*.png.import
+
+# Local A/B authoring fixture, not part of the distributed game.
+game/tests/local_material_before/
+
+# Authoring proof captures are delivered separately; editable scene/source remain tracked.
+art/concept-warden/*.png

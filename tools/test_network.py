@@ -8,7 +8,7 @@ for key,sub in [('XDG_CACHE_HOME','cache'),('XDG_DATA_HOME','data'),('XDG_CONFIG
 children=[]
 handles=[]
 try:
-    for role,args in [('server',['--server','--stop-after=10']),('client1',['--network-probe','--connect=127.0.0.1','--stop-after=6']),('client2',['--network-probe','--connect=127.0.0.1','--stop-after=6'])]:
+    for role,args in [('server',['--server','--stop-after=10']),('client1',['--network-probe','--unequip-probe','--connect=127.0.0.1','--stop-after=6']),('client2',['--network-probe','--connect=127.0.0.1','--stop-after=6'])]:
         handle=(logs/f'network-{role}.log').open('w'); handles.append(handle)
         proc=subprocess.Popen(['godot','--headless','--path',str(root/'game'),'--',*args],stdout=handle,stderr=subprocess.STDOUT,env=env)
         children.append((role,proc))
@@ -21,7 +21,8 @@ try:
         text=(logs/f'network-{role}.log').read_text()
         print(text.strip())
         if 'own_player=true' not in text:raise RuntimeError(f'{role} did not receive authoritative own state')
-    print('JADE_NETWORK_TEST_PASSED server + two clients')
+    if 'unequip_probe=true weapon=' not in (logs/'network-client1.log').read_text():raise RuntimeError('Client1 unequip probe did not execute')
+    print('JADE_NETWORK_TEST_PASSED server + two clients; one unequipped, the other unchanged')
 finally:
     for role,proc in children:
         if proc.poll() is None:

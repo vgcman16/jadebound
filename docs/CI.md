@@ -15,3 +15,7 @@ For a trusted manual branch/revision:
 The validator checks import/parse errors explicitly because an editor import can exit zero despite a script parse error. The network runner caps every process and terminates owned children on failure. No server remains behind after tests.
 
 Windows: open `game/project.godot` in Godot 4.6.3 and press F6/F5. A Windows CI port may invoke the same Godot flags and Python runner; the Bash wrapper currently targets Linux. No runner enrollment or credentials are stored in this repository.
+
+## Optional human-asset data audit
+
+With Python 3.11+ and NumPy (tested:2.3.5), run `timeout 120s python3 tools/audit_human_uv.py`. It checks only included assets and writes `builds/human-uv-report.json`; it performs no rendering, networking or public CI dispatch. The authoring master is not yet integrated into the playable character.

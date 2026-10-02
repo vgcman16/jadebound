@@ -1,11 +1,13 @@
 class_name JadeWorld
 extends RefCounted
 ## Pure authoritative simulation. No scene, render or client ownership dependencies.
+const Gear=preload("res://scripts/equipment_data.gd")
+const Progression=preload("res://scripts/progression_catalog.gd")
 const SPAWN = Vector2(-3, 1)
 const ELDER = Vector2(-5, -4)
 const MAX_PLAYERS = 8
 const SPEED = 5.2
-const OBSTACLES = [Vector3(-10,-7,2.6), Vector3(-10,1,2.3), Vector3(-3,-11,2.5), Vector3(-13,9,2.2), Vector3(1,-8,1.6)]
+const OBSTACLES = [Vector3(-10,-7,2.6), Vector3(-3,-11,2.5), Vector3(-13,9,2.2), Vector3(-4.5,-6.8,1.2), Vector3(-7,-6.8,1.3), Vector3(-1.8,-6.8,1.3), Vector3(-8.1,-4.5,.75), Vector3(-8.1,-2.5,.75), Vector3(-8.1,-.5,.75), Vector3(-8.1,1.5,.75)]
 var players: Dictionary = {}
 var enemies: Dictionary = {}
 var drops: Dictionary = {}
@@ -23,6 +25,12 @@ func _init():
 func add_player(id: int, title: String = "Wanderer") -> bool:
 	if players.has(id) or players.size() >= MAX_PLAYERS: return false
 	players[id] = {"id":id,"name":title.left(20),"pos":SPAWN+Vector2((players.size()%3)*1.2,0),"hp":120,"max_hp":120,"stamina":100.0,"gold":0,"seals":0,"potions":3,"xp":0,"level":1,"quest":0,"kills":0,"cooldown":0.0,"arc_cd":0.0,"line_cd":0.0,"jump":0.0,"jump_dir":Vector2.ZERO,"dead":0.0,"facing":0.0,"attack":0.0,"attack_kind":0,"move":Vector2.ZERO,"goal":SPAWN,"go":false,"last_seq":-1,"last_input":0.0,"upgraded":false,"notice":"Welcome to Lantern Vale. Speak to Keeper Suri [E]."}
+	players[id].merge(Progression.starter_profile(),true)
+	players[id].practice={"saber":0,"polearm":0}
+	players[id].gear=Gear.DEFAULT_GEAR.duplicate(true)
+	players[id].owned_equipment=Gear.STARTER_OWNED.duplicate()
+	players[id].equip_cd=0.0
+	players[id].pending_strike={}
 	return true
 
 func input(id: int, seq: int, movement: Vector2, target: Vector2, use_target: bool):
@@ -51,6 +59,12 @@ func action(id: int, kind: int, aim: Vector2):
 			p.notice = "Cloudleaf flask restores 65 vitality."
 			events.append({"type":"heal","pos":p.pos,"text":"+65"})
 		return
+	var skill=Progression.skill_for_action(kind)
+	if not skill.is_empty():
+		var permission=Progression.can_cast(p,skill,p.gear.weapon)
+		if not permission.ok:
+			p.notice=permission.reason
+			return
 	if kind == 3:
 		if p.jump <= 0 and p.stamina >= 22:
 			p.stamina -= 22
@@ -63,31 +77,43 @@ func action(id: int, kind: int, aim: Vector2):
 	if kind == 2 and (p.arc_cd > 0 or p.stamina < 32): return
 	if kind == 6 and (p.line_cd > 0 or p.stamina < 25): return
 	if not kind in [1,2,6]: return
-	p.cooldown = 0.44
+	p.cooldown = float(Gear.stats(p).cooldown)
 	p.facing = atan2(dir.x,dir.y)
-	p.attack = 0.28
+	p.attack = maxf(.28,p.cooldown*.85)
 	p.attack_kind = kind
-	var damage: int = (24 if p.upgraded else 18) + (p.level-1)*3
+	var gear_stats=Gear.stats(p)
+	var damage: int = int(gear_stats.attack)
 	if kind == 2:
 		p.arc_cd = 4.0
 		p.stamina -= 32
-		damage = 33+(p.level-1)*4
+		damage = int(gear_stats.attack)+15+(p.level-1)
 	if kind == 6:
 		p.line_cd = 2.5
 		p.stamina -= 25
-		damage = 28+(p.level-1)*4
+		damage = int(gear_stats.attack)+10+(p.level-1)
+	p.pending_strike={"remaining":p.attack*.58,"kind":kind,"dir":dir,"damage":damage,"reach":gear_stats.reach}
+
+func resolve_strike(id:int,strike:Dictionary):
+	var p=players[id]
+	if p.dead>0:return
+	var kind:int=strike.kind
+	var dir:Vector2=strike.dir
+	var damage:int=strike.damage
 	events.append({"type":"skill","pos":p.pos,"kind":kind,"dir":dir})
+	var landed=false
 	for eid in enemies:
 		var e = enemies[eid]
 		if e.dead > 0: continue
 		var offset: Vector2 = e.pos-p.pos
-		var hit: bool = offset.length() <= 2.2 and offset.normalized().dot(dir)>-0.1
+		var hit: bool = offset.length() <= float(strike.reach) and offset.normalized().dot(dir)>-0.1
 		if kind == 2: hit=offset.length()<=3.8
 		if kind == 6: hit=offset.dot(dir)>0 and offset.dot(dir)<8 and absf(offset.cross(dir))<0.85
 		if hit:
+			landed=true
 			e.hp-=damage
 			events.append({"type":"damage","pos":e.pos,"text":str(damage)})
 			if e.hp<=0: defeat_enemy(id,eid)
+	if landed:award_practice(p,Progression.skill_for_action(kind))
 
 func defeat_enemy(id: int,eid: int):
 	var p=players[id]
@@ -102,7 +128,8 @@ func defeat_enemy(id: int,eid: int):
 	if p.xp>=p.level*80:
 		p.xp-=p.level*80
 		p.level+=1
-		p.max_hp+=15
+		sync_progression(p)
+		recalculate_stats(p)
 		p.hp=p.max_hp
 		p.notice="Attunement deepens. Level %d!"%p.level
 		events.append({"type":"level","pos":p.pos,"text":"LEVEL %d"%p.level})
@@ -119,8 +146,11 @@ func interact(id: int):
 			p.quest=2
 			p.gold+=100
 			p.upgraded=true
+			if not "dawnsteel_saber" in p.owned_equipment:p.owned_equipment.append("dawnsteel_saber")
+			if Progression.can_equip(p,"dawnsteel_saber","weapon").ok:equip(id,"weapon","dawnsteel_saber")
+			recalculate_stats(p)
 			p.potions+=2
-			p.notice="QUEST COMPLETE · Dawnsteel blade, 100 copper, 2 flasks. Lantern Vale remembers."
+			p.notice="QUEST COMPLETE · Dawnsteel earned (level 6 / saber 3), 100 copper, 2 flasks."
 			events.append({"type":"level","pos":p.pos,"text":"DAWNSTEEL EARNED"})
 		elif p.quest==1:
 			p.notice="Suri: You carry %d / 5 ember seals. Rest here, then return to the field."%p.seals
@@ -142,9 +172,10 @@ func tick(dt:float):
 	clock+=dt
 	for id in players:
 		var p=players[id]
-		for key in ["cooldown","arc_cd","line_cd","attack"]: p[key]=maxf(0,p[key]-dt)
+		for key in ["cooldown","arc_cd","line_cd","attack","equip_cd"]: p[key]=maxf(0,p[key]-dt)
 		p.stamina=minf(100,p.stamina+18*dt)
 		if p.dead>0:
+			p.pending_strike={}
 			p.dead-=dt
 			if p.dead<=0:
 				p.pos=SPAWN
@@ -152,13 +183,19 @@ func tick(dt:float):
 				p.go=false
 				p.notice="The shrine calls you home. Your belongings are safe."
 			continue
+		if not p.pending_strike.is_empty():
+			p.pending_strike.remaining-=dt
+			if p.pending_strike.remaining<=0:
+				var strike=p.pending_strike
+				p.pending_strike={}
+				resolve_strike(id,strike)
 		var direction:Vector2=p.move
 		if clock-p.last_input>0.5: direction=Vector2.ZERO
 		if p.go:
 			var delta:Vector2=p.goal-p.pos
 			if delta.length()<0.2: p.go=false
 			else: direction=delta.normalized()
-		var speed=SPEED
+		var speed=float(Gear.stats(p).speed)
 		if p.jump>0:
 			p.jump=maxf(0,p.jump-dt)
 			direction=p.jump_dir
@@ -193,8 +230,9 @@ func tick(dt:float):
 				e.cooldown=1.2 if not e.elite else 1.5
 				e.attack=0.3
 				if target.jump<0.12:
-					target.hp-=10 if not e.elite else 19
-					events.append({"type":"hurt","pos":target.pos,"text":"-10" if not e.elite else "-19"})
+					var incoming=maxi(1,(10 if not e.elite else 19)-int(Gear.stats(target).defense))
+					target.hp-=incoming
+					events.append({"type":"hurt","pos":target.pos,"text":"-%d"%incoming})
 					if target.hp<=0:
 						target.hp=0
 						target.dead=3.5
@@ -217,3 +255,42 @@ func move_with_collision(pos:Vector2, delta:Vector2)->Vector2:
 
 func snapshot()->Dictionary:
 	return {"players":players.duplicate(true),"enemies":enemies.duplicate(true),"drops":drops.duplicate(true),"time":clock}
+
+func recalculate_stats(player:Dictionary):
+	var current=Gear.stats(player)
+	player.max_hp=int(current.max_hp)
+	player.hp=minf(player.hp,player.max_hp)
+
+func equip(id:int,slot:String,item_id:String)->bool:
+	if not players.has(id) or not slot in Gear.SLOTS:return false
+	if not item_id.is_empty() and not Gear.ITEMS.has(item_id):return false
+	var p=players[id]
+	if p.dead>0 or p.equip_cd>0 or p.attack>0:return false
+	var permission=Progression.can_unequip(p,slot) if item_id.is_empty() else Progression.can_equip(p,item_id,slot)
+	if not permission.ok:
+		p.notice=permission.reason
+		return false
+	if p.gear.get(slot,"")==item_id:return false
+	p.gear[slot]=item_id
+	p.equip_cd=.25
+	recalculate_stats(p)
+	p.notice="Removed %s; the item stays in your satchel."%slot if item_id.is_empty() else "Equipped %s · %s"%[Gear.ITEMS[item_id].label,String(Gear.ITEMS[item_id].quality).capitalize()]
+	return true
+
+func award_practice(player:Dictionary,skill:String):
+	# One point per successful attack, not per target, empty swing or client claim.
+	var family=Progression.item_definition(player.gear.weapon).get("family","")
+	if family in ["saber","polearm"]:
+		player.practice[family]=mini(100000,int(player.practice.get(family,0))+1)
+	if skill in player.mastery:player.mastery[skill]=mini(100000,int(player.mastery[skill])+1)
+	sync_progression(player)
+
+func sync_progression(player:Dictionary):
+	# Small original demo tuning: one base attribute point per earned level.
+	var base=Progression.CLASS_DATA[player.class_id].attributes
+	for attribute in Progression.ATTRIBUTE_KEYS:player.attributes[attribute]=int(base[attribute])+maxi(0,int(player.level)-1)
+	for family in ["saber","polearm"]:player.proficiencies[family]=mini(10,1+int(player.practice.get(family,0))/12)
+	for skill in Progression.available_unlocks(player).skills:
+		if not skill in player.known_skills:
+			player.known_skills.append(skill)
+			player.notice="Learned %s through level and weapon practice."%Progression.SKILLS[skill].label

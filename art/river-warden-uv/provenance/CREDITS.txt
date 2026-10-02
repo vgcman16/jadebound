@@ -1,0 +1,4 @@
+Human base and unchanged skin albedo: MakeHuman system assets, CC0-1.0. Original holders at September 2020 release: Data Collection AB, Joel Palmius, Jonas Hauquier.
+Original Jadebound garment/armor design and UV preparation are project-authored. The generated concept is direction only and is not embedded in meshes/maps.
+MPFB addon code is GPL-3.0-or-later and is not bundled here.
+Skin SHA256: e897c4cc1b6ad5d10a7d2b2be92402feda4e772e6582dfaf0a1e8fc4621d8097
