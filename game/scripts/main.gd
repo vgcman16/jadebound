@@ -1,6 +1,7 @@
 extends Node3D
 const Network=preload("res://scripts/network.gd")
 const View=preload("res://scripts/realm_view.gd")
+const Equipment=preload("res://scripts/equipment_data.gd")
 const HUD=preload("res://scripts/hud.gd")
 var net:JadeNetwork
 var view:RealmView
@@ -18,11 +19,15 @@ var no_render:bool=false
 var capture_path:String=""
 var stop_after:float=0
 var demo_stage:int=0
+var quick_demo:bool=false
+var gear_demo:bool=false
 
 func _ready():
 	var args=OS.get_cmdline_user_args()
 	no_render="--server" in args or "--network-probe" in args
-	demo="--demo" in args
+	gear_demo="--gear-demo" in args
+	demo="--demo" in args or gear_demo
+	quick_demo="--quick-demo" in args
 	for arg in args:
 		if arg.begins_with("--stop-after="):stop_after=float(arg.split("=")[1])
 		if arg.begins_with("--screenshot="):capture_path=arg.trim_prefix("--screenshot=")
@@ -45,11 +50,19 @@ func _ready():
 		return
 	view=View.new()
 	add_child(view)
+	if "--hero-closeup" in args:
+		view.camera.size=7
+		view.follow=Vector3(-3,0,1)
 	var canvas=CanvasLayer.new()
 	add_child(canvas)
 	hud=HUD.new()
 	canvas.add_child(hud)
 	hud.demo=demo
+	hud.appearance_source=view
+	hud.equipment_cycle.connect(cycle_equipment)
+	if gear_demo:
+		hud.inventory=true
+		hud.notice="AUTOMATED EQUIPMENT DEMO · armor, headgear and weapon update through the authoritative model"
 	build_realm_panel(canvas)
 	net.effects_received.connect(func(effects:Array):
 		for event in effects:view.effect(event))
@@ -57,19 +70,25 @@ func _ready():
 	if demo:
 		# Capture runs ordinary input through the same authoritative simulation.
 		net.model.players[1].notice="Lantern Vale · original Godot + Blender gameplay prototype"
+	if "--equipment-review" in args:
+		var reviewer=load("res://tests/capture_equipment.gd").new()
+		reviewer.app=self
+		add_child(reviewer)
 	print("JADE_PLAYABLE_READY")
 
 func _process(delta:float):
 	elapsed+=delta
 	if stop_after>0 and elapsed>=stop_after:
 		if no_render and net.mode=="client":
-			var valid=net.snapshot_count>5 and net.state.get("players",{}).has(net.local_id)
-			print("JADE_NETWORK_PROBE snapshots=",net.snapshot_count," own_player=",valid," players=",net.state.get("players",{}).size())
+			var valid=net.snapshot_count>5 and net.max_seen_players>=2 and net.state.get("players",{}).has(net.local_id)
+			print("JADE_NETWORK_PROBE snapshots=",net.snapshot_count," own_player=",valid," max_players=",net.max_seen_players)
 			get_tree().quit(0 if valid else 3)
 		else:get_tree().quit()
 		return
 	if no_render:
-		if net.mode=="client":
+		input_timer+=delta
+		if net.mode=="client" and input_timer>=.05:
+			input_timer-=.05
 			net.send_input(Vector2(1,0),Vector2.ZERO,false)
 		return
 	view.selected=selected
@@ -127,11 +146,14 @@ func _unhandled_input(event:InputEvent):
 			KEY_SPACE:attack(3)
 			KEY_E:attack(4)
 			KEY_H:attack(5)
+			KEY_C:cycle_equipment("armor")
+			KEY_V:cycle_equipment("head")
+			KEY_B:cycle_equipment("weapon")
 			KEY_F5:save_progress()
 			KEY_F9:load_progress()
 	if event is InputEventMouseButton and event.pressed and not realm_panel.visible:
-		if event.button_index==MOUSE_BUTTON_WHEEL_UP:view.camera.size=maxf(15,view.camera.size-1)
-		if event.button_index==MOUSE_BUTTON_WHEEL_DOWN:view.camera.size=minf(32,view.camera.size+1)
+		if event.button_index==MOUSE_BUTTON_WHEEL_UP:view.camera.size=maxf(12,view.camera.size-1)
+		if event.button_index==MOUSE_BUTTON_WHEEL_DOWN:view.camera.size=minf(28,view.camera.size+1)
 		if event.button_index==MOUSE_BUTTON_LEFT:
 			goal=view.screen_to_ground(event.position)
 			use_goal=true
@@ -145,13 +167,19 @@ func _unhandled_input(event:InputEvent):
 					if e.dead<=0 and e.pos.distance_to(goal)<1.1:selected=id
 		if event.button_index==MOUSE_BUTTON_RIGHT:attack(1)
 
+func cycle_equipment(slot:String):
+	var p:Dictionary=net.state.get("players",{}).get(net.local_id,{})
+	if p.is_empty():return
+	var item=Equipment.next_owned(p,slot)
+	if not item.is_empty():net.send_equip(slot,item)
+
 func attack(kind:int):
 	if kind in [2,3,6]:selected=-1
 	net.send_action(kind,view.screen_to_ground(get_viewport().get_mouse_position()))
 
 func build_realm_panel(canvas:CanvasLayer):
 	realm_panel=PanelContainer.new()
-	realm_panel.position=Vector2(500,260)
+	realm_panel.position=Vector2(420,220)
 	realm_panel.custom_minimum_size=Vector2(440,340)
 	canvas.add_child(realm_panel)
 	var margin=MarginContainer.new()
@@ -198,6 +226,7 @@ func save_progress():
 	for key in ["hp","max_hp","stamina","gold","seals","potions","xp","level","quest","kills","upgraded"]:data[key]=p[key]
 	var file=FileAccess.open("user://jadebound-save.json",FileAccess.WRITE)
 	if file:
+		data.gear=p.gear.duplicate(true)
 		file.store_string(JSON.stringify(data))
 		hud.notice="Offline progress saved. F9 restores it at the village."
 	else:hud.notice="Could not write the offline save."
@@ -214,7 +243,15 @@ func load_progress():
 	p.hp=p.max_hp
 	p.stamina=100.0
 	p.quest=clampi(p.quest,0,2)
-	p.upgraded=data.get("upgraded",false)==true
+	p.upgraded=p.quest==2
+	if p.upgraded and not "dawnsteel_saber" in p.owned_equipment:p.owned_equipment.append("dawnsteel_saber")
+	var saved_gear=data.get("gear",{})
+	if saved_gear is Dictionary:
+		for slot in Equipment.SLOTS:
+			var item=saved_gear.get(slot,"")
+			if item in p.owned_equipment and Equipment.ITEMS.has(item) and Equipment.ITEMS[item].slot==slot:p.gear[slot]=item
+	net.model.recalculate_stats(p)
+	p.hp=p.max_hp
 	p.pos=JadeWorld.SPAWN
 	p.dead=0.0
 	p.go=false
@@ -228,12 +265,48 @@ func demo_input(delta:float):
 	input_timer+=delta
 	if input_timer<.05:return
 	input_timer=0
+	if gear_demo:
+		net.send_input(Vector2.ZERO,p.pos,false)
+		if elapsed>1.5 and demo_stage==0:
+			net.send_equip("armor","warden_lamellar")
+			demo_stage=1
+		elif elapsed>2.5 and demo_stage==1:
+			net.send_equip("head","warden_helm")
+			demo_stage=2
+		elif elapsed>3.5 and demo_stage==2:
+			net.send_equip("weapon","ironwind_glaive")
+			demo_stage=3
+		return
+	if quick_demo:
+		if elapsed<.75:
+			net.send_input(Vector2.ZERO,p.pos,false)
+		elif elapsed<1.7:
+			if demo_stage==0:
+				net.send_action(3,Vector2(5,2))
+				demo_stage=1
+			net.send_input(Vector2.ZERO,p.pos,false)
+		else:
+			var target:Dictionary={}
+			var distance=100.0
+			for e in net.model.enemies.values():
+				if e.dead<=0 and p.pos.distance_to(e.pos)<distance:
+					distance=p.pos.distance_to(e.pos)
+					target=e
+			if not target.is_empty():
+				net.send_input(Vector2.ZERO,target.pos,distance>1.8)
+				if p.arc_cd<=0 and distance<3.5:net.send_action(2,target.pos)
+				elif p.line_cd<=0:net.send_action(6,target.pos)
+				elif distance<2:net.send_action(1,target.pos)
+		return
 	if elapsed<3:
 		net.send_input(Vector2.ZERO,JadeWorld.ELDER,true)
 	elif elapsed<4:
 		if p.quest==0:net.send_action(4,JadeWorld.ELDER)
 		net.send_input(Vector2.ZERO,Vector2(4,2),true)
 	elif elapsed<7:
+		if elapsed>4.4 and demo_stage==0:
+			net.send_action(3,Vector2(5,2))
+			demo_stage=1
 		net.send_input(Vector2.ZERO,Vector2(5,2),true)
 	elif elapsed<20:
 		var nearest=-1
@@ -250,6 +323,9 @@ func demo_input(delta:float):
 			elif p.arc_cd<=0 and distance<3.5:net.send_action(2,e.pos)
 			elif distance<2:net.send_action(1,e.pos)
 			if p.hp<65:net.send_action(5,e.pos)
-			net.send_action(4,e.pos)
+			for d in net.model.drops.values():
+				if p.pos.distance_to(d.pos)<2.5:
+					net.send_action(4,d.pos)
+					break
 	else:
 		net.send_input(Vector2.ZERO,Vector2(-3,1),true)

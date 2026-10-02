@@ -15,6 +15,8 @@ var snap_timer:float=0
 var commands:Dictionary={}
 var dedicated:bool=false
 var snapshot_count:int=0
+var max_seen_players:int=0
+var max_snapshot_bytes:int=0
 
 func _ready():
 	multiplayer.peer_connected.connect(_peer_connected)
@@ -87,6 +89,16 @@ func send_action(kind:int,aim:Vector2):
 		if multiplayer.multiplayer_peer.get_connection_status()==MultiplayerPeer.CONNECTION_CONNECTED: submit_action.rpc_id(1,kind,aim)
 	elif model: model.action(local_id,kind,aim)
 
+func send_equip(slot:String,item_id:String):
+	if mode=="client":
+		if multiplayer.multiplayer_peer.get_connection_status()==MultiplayerPeer.CONNECTION_CONNECTED:submit_equip.rpc_id(1,slot,item_id)
+	elif model:model.equip(local_id,slot,item_id)
+
+@rpc("any_peer","call_remote","reliable",1)
+func submit_equip(slot:String,item_id:String):
+	if not mode in ["server","host"]:return
+	model.equip(multiplayer.get_remote_sender_id(),slot,item_id)
+
 @rpc("any_peer","call_remote","unreliable_ordered",0)
 func submit_input(seq:int,move:Vector2,target:Vector2,use_target:bool):
 	if not mode in ["server","host"]: return
@@ -104,8 +116,14 @@ func submit_action(kind:int,aim:Vector2):
 	model.action(sender,kind,aim)
 
 @rpc("authority","call_remote","unreliable_ordered",0)
-func receive_state(payload:Dictionary):
-	state=payload
+func receive_state(payload:PackedByteArray):
+	if payload.size()>65536:return
+	var raw=payload.decompress_dynamic(262144,FileAccess.COMPRESSION_DEFLATE)
+	if raw.is_empty():return
+	var decoded=bytes_to_var(raw)
+	if not decoded is Dictionary:return
+	state=decoded
+	max_seen_players=maxi(max_seen_players,state.get("players",{}).size())
 	snapshot_count+=1
 	state_received.emit(state)
 
@@ -121,10 +139,13 @@ func _physics_process(delta:float):
 		accumulator-=0.05
 	snap_timer+=delta
 	if snap_timer>=0.05:
-		snap_timer=0
+		snap_timer-=0.05
 		state=model.snapshot()
 		state_received.emit(state)
-		if mode in ["host","server"] and not multiplayer.get_peers().is_empty(): receive_state.rpc(state)
+		if mode in ["host","server"] and not multiplayer.get_peers().is_empty():
+			var packet=var_to_bytes(state).compress(FileAccess.COMPRESSION_DEFLATE)
+			max_snapshot_bytes=maxi(max_snapshot_bytes,packet.size())
+			receive_state.rpc(packet)
 		if not model.events.is_empty():
 			effects_received.emit(model.events)
 			if mode in ["host","server"] and not multiplayer.get_peers().is_empty(): receive_effects.rpc(model.events)

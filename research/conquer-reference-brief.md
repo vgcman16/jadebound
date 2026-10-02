@@ -2,6 +2,9 @@
 
 Research date: 2026-10-02 UTC. Purpose: inform an original playable game, not reproduce Conquer Online's assets, maps, branding, UI, characters, or exact balance. Sources are public official publisher pages unless identified otherwise. No game clients, asset archives, private-server code, or executables were acquired.
 
+Additional equipment/Super-quality visual research and detailed adult character-art direction are covered in [Equipment rarity and VFX reference](equipment-rarity-and-vfx-reference.md). That document takes precedence for character-art direction and equipment/effect-layer distinctions. It also records the actual playback limitation on the supplied video rather than claiming it was watched.
+
+
 ## The recommendation in one paragraph
 
 Build the first slice around **responsive click movement, frequent readable leaps, aimed melee lines, small clusters of enemies, visible loot, and a short return-to-town upgrade loop**. This combination is more distinctive than simply using an isometric camera and fantasy swords. Give the environment restrained color and the combat generous visual clarity. Demonstrate one genuinely enjoyable combat role before adding a class catalogue. A server-authoritative combat core and durable item identity must precede competitive PvP, item loss, trading, and a persistent economy.
@@ -12,7 +15,7 @@ Build the first slice around **responsive click movement, frequent readable leap
 - Historical official onboarding specifies left-click walking/running and Ctrl+click jumping. The weapon guide distinguishes manually activated stamina-based weapon skills from mana-based magic. [S2, S3]
 - A January 2010 publisher retrospective says its Classic edition removed Battle Power and talismans, emphasizing player control, role cooperation, and hunting for equipment. This is evidence about that historical edition, not proof that all later servers have those rules. [S4]
 - The official returning-player guide records an October 17, 2017 graphics revision and describes faster progression, epic weapons, and additional systems. Its ten-class count is archival, not a verified 2026 census. [S5]
-- The official Origin-server page describes five starting class families and staged unlocks of later systems. Thus even an official product labelled nostalgic is not necessarily a pristine 2003 ruleset. [S6]
+- The older Origin-server overview describes five starting class families and staged unlocks. The July 2026 PC SkyStep announcement explicitly lists six, adding Dune Wanderer. Thus nostalgic branding does not imply one pristine or immutable 2003 ruleset. [S6, S17]
 
 **Source reliability caveat:** official pages retain old copy inside updated navigation. Counts, event schedules, damage tables, and even PvP descriptions differ between pages. Live browser inspection of the Guild War page showed Sunday while the search-indexed copy showed Saturday. This brief deliberately does not prescribe those schedules or claim an exact current class roster. No timings were measured from the running game, and no game executable was used. Numerical tuning below is proposed for the new game.
 
@@ -156,6 +159,7 @@ The first deliverable should state exactly what is playable, what is genuinely n
 - **S14 — Official trade FAQ:** https://co.99.com/guide/faq/trade.shtml (bilateral trade and player booths)
 - **S15 — Official weekly Guild War:** https://co.99.com/guide/quests/guildwar.shtml (objective and roles; do not reuse indexed schedule as a current fact)
 - **S16 — Official PK overview:** https://co.99.com/guide/guides/aboutpk.shtml (modes, notoriety, equipment consequence example; era-sensitive)
+- **S17 — Official July 2026 PC SkyStep Origin announcement:** https://co.99.com/news/2026-07-13/the_new_us_server_skystep_launches_at_2_00_on__jul__14__2026.shtml (six starting class families, including Dune Wanderer; staged unlocks and server-specific rules)
 
 ### Inspected visual references (reference-only)
 

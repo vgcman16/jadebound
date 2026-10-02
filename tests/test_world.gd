@@ -1,11 +1,12 @@
 extends SceneTree
 const World=preload("res://scripts/world_model.gd")
 var assertions=0
+var failed=false
 func check(condition:bool,label:String):
 	assertions+=1
 	if not condition:
 		push_error("FAIL: "+label)
-		quit(1)
+		failed=true
 		return
 	print("PASS: "+label)
 func _initialize():
@@ -66,5 +67,5 @@ func _initialize():
 	w.action(2,4,World.SPAWN)
 	check(w.players[2].gold==9,"abandoned loot unlocks")
 	check(w.move_with_collision(Vector2(15,0),Vector2(50,0)).x<=16,"world boundary enforced")
-	print("JADE_WORLD_TESTS_PASSED ",assertions)
-	quit(0)
+	if not failed:print("JADE_WORLD_TESTS_PASSED ",assertions)
+	quit(1 if failed else 0)

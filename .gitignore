@@ -17,3 +17,8 @@ Thumbs.db
 .idea/
 local/
 captures/
+
+# Copyrighted reference pixels are local review material, never game/repo assets.
+research/reference-only/
+# Private supplied-image review notes are not a public game deliverable.
+research/full-game-coverage-and-photo-findings.md
